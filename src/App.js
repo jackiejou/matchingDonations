@@ -21,6 +21,7 @@ class App extends Component {
     let arr = this.state.matchingDonationList.slice();
     let matchingDonation = {
       value: this.state.matchingDonation,
+      original: this.state.matchingDonation,
       history: {},
       show: false,
     }
@@ -29,7 +30,6 @@ class App extends Component {
       matchingDonation: '',
       matchingDonationList: arr
     });
-    console.log(matchingDonation);
     e.preventDefault();
   }
   matchingDonateOnChange(e) {
@@ -43,28 +43,35 @@ class App extends Component {
     let arr = this.state.matchingDonationList;
     let value = +this.state.donationAmount;
     arr = arr.map(donation => {
-      if (!donation.history[user]) {
+      if (!donation.history[user] && donation.value) {
         if (donation.value < value) {
+          donation.history[user] = donation.value
           donation.value = 0;
         } else {
           donation.value -= value; 
+          donation.history[user] = value;
         }
-        donation.history[user] = value;
       }
       return donation;
     });
+    let total = this.state.totalDonatedSum + value;
+    console.log('donate', total);
     this.setState({
       'matchingDonationList': arr,
       'donationAmount': '',
-      'totalDonatedSum': this.state.totalDonatedSum + value,
-    });
-    this.calculateTotal();
+      'email': '',
+      'totalDonatedSum': total,
+    }, this.calculate(total));
     e.preventDefault();
   }
-  calculateTotal() {
-    console.log('test');
-    let num = this.state.totalDonatedSum + this.state.totalDonatedSum * this.state.matchingDonationList.length;
-    this.setState({totalSum: num});
+  calculate(n) {
+    let sum = 0;
+    for (let donation of this.state.matchingDonationList) {
+      sum += (donation.original - donation.value);
+    }
+    this.setState((prevState) => ({
+      totalSum: sum + n,
+    }));
   }
   render() {
     return (
@@ -73,30 +80,33 @@ class App extends Component {
           <img src={logo} className="App-logo" alt="logo" />
           <h2>Welcome to Matching donations site</h2>
         </div>
-        <label>Email:</label>
-        <input type="email" required onChange={this.emailOnChange.bind(this)} value={this.state.email}/>
+        <br/>
         <form>
-          <label>Matching Donations</label>
-          <input onChange={this.matchingDonateOnChange.bind(this)} value={this.state.matchingDonation} placeholder="Donation amount" />
+          <label>Matching Donations </label>
+          <input  type="number" placeholder="e.g. 987.65" step="0.01" min="0.01" required onChange={this.matchingDonateOnChange.bind(this)} value={this.state.matchingDonation} />
           <button onClick={this.matchingDonate.bind(this)}>Submit</button>
         </form>
         <div>
-          {this.state.matchingDonationList.map(ele =>
-            <div>
-            <p>{ele.value}</p>
-            <p>{Object.keys(ele.history).map(user => 
-              <p>{user} donated {ele.history[user]}</p>
-            )}</p>
+          {this.state.matchingDonationList.map((ele, index) =>
+            <div key={index}>
+              <h3>{ele.value} of {ele.original} left</h3>
+              <p>{Object.keys(ele.history).map(user => 
+                <p key={user}>{user} donated ${ele.history[user]}</p>
+              )}</p>
             </div>    
           )}
         </div>
-        <form>
-          <label>Donate</label>
-          <input type="number" step="0.01" min="0" required onChange={this.donationOnChange.bind(this)} value={this.state.donationAmount}/>
-          <button onClick={this.donate.bind(this)}>Submit</button>
+        <br/>
+        <form onSubmit={this.donate.bind(this)}>
+          <label>Email: </label>
+          <input type="email" placeholder="123@abc.com" required onChange={this.emailOnChange.bind(this)} value={this.state.email}/>
+          <br/>
+          <label>Donate </label>
+          <input type="number" placeholder="e.g. 123.45" step="0.01" min="0.01" required onChange={this.donationOnChange.bind(this)} value={this.state.donationAmount}/>
+          <button type="submit">Submit</button>
         </form>
         <h3> Total so far</h3>
-        <p> {this.state.totalSum}</p>
+        <p> ${this.state.totalSum.toFixed(2)}</p>
       </div>
     );
   }
